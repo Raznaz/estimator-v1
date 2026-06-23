@@ -1,0 +1,12 @@
+{
+  "bindings": [
+    {
+      "key": "ctrl+shift+c",
+      "command": "claude.copyResponse"
+    },
+    {
+      "key": "ctrl+shift+s",
+      "command": "claude.saveResponse"
+    }
+  ]
+}
