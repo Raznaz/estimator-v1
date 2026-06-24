@@ -35,6 +35,8 @@ export interface JoinRoomPayload {
   roomCode: string;
   userName: string;
   role?: ParticipantRole;
+  /** JWT access-токен зарегистрированного пользователя (для гостей не передаётся) */
+  token?: string;
 }
 
 export interface CastVotePayload {

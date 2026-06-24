@@ -17,6 +17,8 @@ export interface User {
   id: string;
   name: string;
   email?: string | null;
+  /** URL аватара: пресет DiceBear или загруженный файл (/static/...) */
+  avatarUrl?: string | null;
   createdAt: string;
 }
 

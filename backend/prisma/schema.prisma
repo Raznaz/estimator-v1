@@ -40,13 +40,28 @@ enum ScaleType {
 }
 
 model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String?  @unique
+  passwordHash String? // null => гость (анонимный вход без регистрации)
+  avatarUrl    String? // DiceBear-URL пресета или /static/avatars/<file>
+  createdAt    DateTime @default(now())
+
+  ownedRooms    Room[]         @relation("RoomOwner")
+  participants  Participant[]
+  refreshTokens RefreshToken[]
+}
+
+model RefreshToken {
   id        String   @id @default(cuid())
-  name      String
-  email     String?  @unique
+  tokenHash String // bcrypt-хеш refresh-токена
+  expiresAt DateTime
   createdAt DateTime @default(now())
 
-  ownedRooms   Room[]        @relation("RoomOwner")
-  participants Participant[]
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Room {
