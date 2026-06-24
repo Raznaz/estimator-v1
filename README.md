@@ -6,21 +6,22 @@
 
 ## Стек
 
-- **Монорепо:** npm workspaces (`apps/*`, `packages/*`)
-- **Frontend:** Next.js 16 (App Router, TypeScript, CSS Modules) — `apps/web`
-- **Backend:** NestJS (TypeScript) — `apps/api`
+- **Монорепо:** npm workspaces (`frontend`, `backend`)
+- **Frontend:** Next.js 16 (App Router, TypeScript, CSS Modules) — `frontend`
+- **Backend:** NestJS (TypeScript) — `backend`
 - **БД:** PostgreSQL + Prisma ORM
 - **Real-time:** Socket.IO (NestJS gateway + клиент)
-- **Общий код:** `packages/shared` (типы, socket-события, шкалы оценки)
+- **Общий контракт:** типы, socket-события и шкалы оценки продублированы в
+  `frontend/src/shared` и `backend/src/shared` (держать копии синхронными)
 
 ## Структура
 
 ```
-apps/
-  web/        # Next.js — UI комнаты и голосования
-  api/        # NestJS — REST + WebSocket, Prisma
-packages/
-  shared/     # общие типы/события/константы (@estimator/shared)
+frontend/     # Next.js — UI комнаты и голосования
+  src/shared/ # копия контракта (типы/события/шкалы)
+backend/      # NestJS — REST + WebSocket, Prisma
+  src/shared/ # копия контракта (типы/события/шкалы)
+  prisma/     # схема и миграции
 ```
 
 ## Быстрый старт
@@ -42,8 +43,8 @@ npm run prisma:generate
 npm run prisma:migrate
 
 # 5. Запуск (в отдельных терминалах)
-npm run dev:api   # http://localhost:3001
-npm run dev:web   # http://localhost:3000
+npm run dev:backend    # http://localhost:3001
+npm run dev:frontend   # http://localhost:3000
 ```
 
 ## Полезные команды
@@ -51,7 +52,7 @@ npm run dev:web   # http://localhost:3000
 | Команда | Действие |
 |---|---|
 | `npm run db:up` / `db:down` | Запустить / остановить PostgreSQL в Docker |
-| `npm run dev:web` | Dev-сервер фронтенда |
-| `npm run dev:api` | Dev-сервер бэкенда |
+| `npm run dev:frontend` | Dev-сервер фронтенда |
+| `npm run dev:backend` | Dev-сервер бэкенда |
 | `npm run build` | Сборка всех пакетов |
 | `npm run lint` | Линт всех пакетов |

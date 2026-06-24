@@ -13,7 +13,7 @@ out/
 *.local
 
 # prisma
-apps/api/prisma/migrations/dev.db*
+backend/prisma/migrations/dev.db*
 
 # logs
 *.log
