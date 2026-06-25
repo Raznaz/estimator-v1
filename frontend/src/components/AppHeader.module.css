@@ -28,7 +28,7 @@
   padding: 0.4rem 0.85rem;
   border-radius: var(--radius);
   background: var(--color-accent);
-  color: #fff;
+  color: var(--color-on-accent);
 }
 
 .linkButton {

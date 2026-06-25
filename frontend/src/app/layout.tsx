@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { AppHeader } from '@/components/AppHeader';
 import { AuthProvider } from '@/lib/auth-context';
+import { ThemeProvider } from '@/lib/theme-context';
 import './globals.css';
 import styles from './layout.module.css';
 
@@ -10,15 +11,29 @@ export const metadata: Metadata = {
   description: 'Командная оценка тикетов на refinement',
 };
 
+// Выполняется до гидрации: ставит сохранённую тему на <html>, чтобы не было
+// тёмного мигания (FOUC) при перезагрузке на светлой теме. Дефолт — тёмная.
+const themeInitScript = `
+try {
+  var t = localStorage.getItem('estimator-theme');
+  if (t === 'light') document.documentElement.dataset.theme = 'light';
+} catch (e) {}
+`;
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="ru">
+    <html lang="ru" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body>
         <AuthProvider>
-          <div className={styles.shell}>
-            <AppHeader />
-            <main className={styles.main}>{children}</main>
-          </div>
+          <ThemeProvider>
+            <div className={styles.shell}>
+              <AppHeader />
+              <main className={styles.main}>{children}</main>
+            </div>
+          </ThemeProvider>
         </AuthProvider>
       </body>
     </html>

@@ -1,3 +1,4 @@
+/* Тёмная тема — дефолт. Светлая включается через [data-theme='light'] на <html>. */
 :root {
   --color-bg: #0f1115;
   --color-surface: #1a1d24;
@@ -5,7 +6,24 @@
   --color-text: #e6e8eb;
   --color-muted: #9aa0a6;
   --color-accent: #4f7cff;
+  --color-on-accent: #fff;
+  --color-error: #ff6b6b;
+  --color-success: #4caf82;
   --radius: 8px;
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  --color-bg: #f7f8fa;
+  --color-surface: #ffffff;
+  --color-border: #e2e5ea;
+  --color-text: #1a1d24;
+  --color-muted: #5f6571;
+  --color-accent: #4f7cff;
+  --color-on-accent: #fff;
+  --color-error: #d64545;
+  --color-success: #2e9e6b;
+  color-scheme: light;
 }
 
 * {
@@ -28,6 +46,9 @@ body {
     Roboto,
     sans-serif;
   line-height: 1.5;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
 a {

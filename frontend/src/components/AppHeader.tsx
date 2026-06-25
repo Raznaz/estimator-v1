@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { resolveAvatarUrl } from '@/lib/avatar';
+import { ThemeToggle } from './ThemeToggle';
 import styles from './AppHeader.module.css';
 
 export function AppHeader() {
@@ -15,6 +16,7 @@ export function AppHeader() {
       </Link>
 
       <nav className={styles.nav}>
+        <ThemeToggle />
         {loading ? null : user ? (
           <>
             <Link href="/profile" className={styles.user}>

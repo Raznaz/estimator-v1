@@ -48,7 +48,7 @@
   border: none;
   border-radius: var(--radius);
   background: var(--color-accent);
-  color: #fff;
+  color: var(--color-on-accent);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
@@ -60,13 +60,13 @@
 }
 
 .error {
-  color: #ff6b6b;
+  color: var(--color-error);
   font-size: 0.85rem;
   margin: 0;
 }
 
 .success {
-  color: #4caf82;
+  color: var(--color-success);
   font-size: 0.85rem;
   margin: 0;
 }
