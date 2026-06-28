@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { useRoomHeader } from '@/lib/room-header-context';
@@ -11,7 +12,11 @@ import styles from './AppHeader.module.css';
 export function AppHeader() {
   const { user, loading, logout } = useAuth();
   const { info } = useRoomHeader();
+  const pathname = usePathname();
   const [copied, setCopied] = useState(false);
+
+  // Сохраняем текущую страницу, чтобы вернуться сюда после входа/регистрации.
+  const returnTo = pathname && pathname !== '/' ? `?returnTo=${encodeURIComponent(pathname)}` : '';
 
   async function copyInvite() {
     if (!info) return;
@@ -66,10 +71,10 @@ export function AppHeader() {
           </>
         ) : (
           <>
-            <Link href="/login" className={styles.link}>
+            <Link href={`/login${returnTo}`} className={styles.link}>
               Войти
             </Link>
-            <Link href="/register" className={styles.linkPrimary}>
+            <Link href={`/register${returnTo}`} className={styles.linkPrimary}>
               Регистрация
             </Link>
           </>

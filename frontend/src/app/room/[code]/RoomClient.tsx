@@ -5,6 +5,7 @@ import { getSocket } from '@/lib/socket';
 import { getAccessToken } from '@/lib/auth-storage';
 import { getDisplayName, setDisplayName } from '@/lib/room-session';
 import { resolveAvatarUrl } from '@/lib/avatar';
+import { useAuth } from '@/lib/auth-context';
 import { useRoomHeader } from '@/lib/room-header-context';
 import {
   ClientEvents,
@@ -34,12 +35,15 @@ export default function RoomClient({ code }: { code: string }) {
   const [newTitle, setNewTitle] = useState('');
 
   const { setInfo } = useRoomHeader();
+  const { user, loading: authLoading } = useAuth();
 
-  // Определяем отображаемое имя из localStorage (или ждём ввода в гейте).
+  // Имя для входа: у залогиненного — из профиля, у гостя — из localStorage
+  // (или ждём ввода в гейте). Ждём, пока подтянется auth-сессия.
   useEffect(() => {
-    setName(getDisplayName());
+    if (authLoading) return;
+    setName(user?.name ?? getDisplayName());
     setNameChecked(true);
-  }, []);
+  }, [authLoading, user]);
 
   // Подключение к комнате и подписка на состояние.
   useEffect(() => {
