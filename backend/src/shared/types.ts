@@ -41,6 +41,23 @@ export interface Participant {
   joinedAt: string;
 }
 
+/**
+ * Участник комнаты для отображения в UI: данные Participant, обогащённые
+ * именем/аватаром пользователя и статусом голоса в текущем раунде.
+ */
+export interface ParticipantView {
+  /** id записи Participant */
+  id: string;
+  userId: string;
+  name: string;
+  avatarUrl?: string | null;
+  role: ParticipantRole;
+  /** Является ли участник владельцем комнаты */
+  isOwner: boolean;
+  /** Проголосовал ли участник в текущем раунде */
+  hasVoted: boolean;
+}
+
 export interface Ticket {
   id: string;
   roomId: string;

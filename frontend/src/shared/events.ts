@@ -6,7 +6,7 @@
  * держи обе копии синхронными.
  */
 
-import type { ParticipantRole, PublicVote, Room, Round, Ticket } from './types';
+import type { ParticipantRole, ParticipantView, PublicVote, Room, Round, Ticket } from './types';
 
 /** События, которые клиент отправляет на сервер */
 export const ClientEvents = {
@@ -16,6 +16,7 @@ export const ClientEvents = {
   REVEAL_ROUND: 'round:reveal',
   RESET_ROUND: 'round:reset',
   SELECT_TICKET: 'ticket:select',
+  CREATE_TICKET: 'ticket:create',
 } as const;
 
 /** События, которые сервер шлёт клиентам */
@@ -56,11 +57,17 @@ export interface SelectTicketPayload {
   ticketId: string;
 }
 
+/** Создание тикета. Комната определяется по сокет-сессии (где участник состоит). */
+export interface CreateTicketPayload {
+  title?: string;
+}
+
 // --- Payload'ы серверных событий ---
 
 /** Полное состояние комнаты — отправляется при входе и значимых изменениях */
 export interface RoomStatePayload {
   room: Room;
+  participants: ParticipantView[];
   tickets: Ticket[];
   activeTicketId: string | null;
   currentRound: Round | null;
