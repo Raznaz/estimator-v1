@@ -1,19 +1,27 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useState, type FormEvent } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useState, type FormEvent } from 'react';
 import { ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import { safeReturnTo } from '@/lib/safe-redirect';
 import styles from '@/components/forms.module.css';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get('returnTo');
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Ссылка на регистрацию сохраняет тот же returnTo.
+  const registerHref = returnTo
+    ? `/register?returnTo=${encodeURIComponent(returnTo)}`
+    : '/register';
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -21,7 +29,7 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       await login(email, password);
-      router.push('/');
+      router.push(safeReturnTo(returnTo));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Не удалось войти');
     } finally {
@@ -65,8 +73,16 @@ export default function LoginPage() {
         </button>
       </form>
       <p className={styles.hint}>
-        Нет аккаунта? <Link href="/register">Зарегистрироваться</Link>
+        Нет аккаунта? <Link href={registerHref}>Зарегистрироваться</Link>
       </p>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }

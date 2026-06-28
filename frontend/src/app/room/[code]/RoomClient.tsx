@@ -5,6 +5,7 @@ import { getSocket } from '@/lib/socket';
 import { getAccessToken } from '@/lib/auth-storage';
 import { getDisplayName, setDisplayName } from '@/lib/room-session';
 import { resolveAvatarUrl } from '@/lib/avatar';
+import { useAuth } from '@/lib/auth-context';
 import { useRoomHeader } from '@/lib/room-header-context';
 import {
   ClientEvents,
@@ -34,12 +35,15 @@ export default function RoomClient({ code }: { code: string }) {
   const [newTitle, setNewTitle] = useState('');
 
   const { setInfo } = useRoomHeader();
+  const { user, loading: authLoading } = useAuth();
 
-  // Определяем отображаемое имя из localStorage (или ждём ввода в гейте).
+  // Имя для входа: у залогиненного — из профиля, у гостя — из localStorage
+  // (или ждём ввода в гейте). Ждём, пока подтянется auth-сессия.
   useEffect(() => {
-    setName(getDisplayName());
+    if (authLoading) return;
+    setName(user?.name ?? getDisplayName());
     setNameChecked(true);
-  }, []);
+  }, [authLoading, user]);
 
   // Подключение к комнате и подписка на состояние.
   useEffect(() => {
@@ -180,26 +184,26 @@ export default function RoomClient({ code }: { code: string }) {
 
       <div className={styles.layout}>
         <main className={styles.stage}>
-          <div className={styles.stageHeader}>
-            {isOwner && (
-              <form className={styles.newTicketForm} onSubmit={createTicket}>
-                <input
-                  className={styles.input}
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="Название новой задачи (необязательно)"
-                  maxLength={120}
-                />
-                <button className={styles.smallButton} type="submit">
-                  Создать тикет
-                </button>
-              </form>
-            )}
+          {isOwner && (
+            <form className={styles.newTicketForm} onSubmit={createTicket}>
+              <input
+                className={styles.input}
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                placeholder="Название новой задачи (необязательно)"
+                maxLength={120}
+              />
+              <button className={styles.smallButton} type="submit">
+                Создать тикет
+              </button>
+            </form>
+          )}
 
-            {activeTicket ? (
-              <div className={styles.activeInfo}>
-                <h2 className={styles.activeTitle}>{activeTicket.title}</h2>
-                <div className={styles.activeStatus}>
+          <div className={styles.tableWrap}>
+            <div className={styles.tableOval}>
+              {activeTicket ? (
+                <div className={styles.activeInfo}>
+                  <h2 className={styles.activeTitle}>{activeTicket.title}</h2>
                   {revealed ? (
                     <span className={styles.average}>
                       Среднее: <strong>{activeTicket.finalEstimate ?? '—'}</strong>
@@ -218,45 +222,40 @@ export default function RoomClient({ code }: { code: string }) {
                     </button>
                   )}
                 </div>
-              </div>
-            ) : (
-              <p className={styles.empty}>
-                {isOwner
-                  ? 'Создайте задачу — голосование начнётся автоматически.'
-                  : 'Ожидаем, когда владелец создаст задачу для оценки.'}
-              </p>
-            )}
-          </div>
-
-          <div className={styles.tableWrap}>
-            <div className={styles.tableOval}>
-              <span className={styles.tableLabel}>
-                {voters.length > 0 ? `${voters.length} за столом` : 'Стол пуст'}
-              </span>
+              ) : (
+                <p className={styles.tableEmpty}>
+                  {isOwner
+                    ? 'Создайте задачу — голосование начнётся автоматически.'
+                    : 'Ожидаем, когда владелец создаст задачу для оценки.'}
+                </p>
+              )}
             </div>
             {voters.map((p, i) => {
               const angle = (i / voters.length) * 2 * Math.PI - Math.PI / 2;
-              const left = 50 + 44 * Math.cos(angle);
-              const top = 50 + 44 * Math.sin(angle);
+              const left = 50 + 46 * Math.cos(angle);
+              const top = 50 + 46 * Math.sin(angle);
               const value = voteValueByParticipant.get(p.id);
-              let chip: React.ReactNode = null;
-              if (revealed) {
-                chip = <span className={styles.seatValue}>{value ?? '—'}</span>;
-              } else if (currentRound) {
-                chip = <span className={styles.seatStatus}>{p.hasVoted ? '✅' : '⏳'}</span>;
-              }
+              const cardClass = revealed
+                ? styles.seatCardRevealed
+                : p.hasVoted
+                  ? styles.seatCardVoted
+                  : currentRound
+                    ? styles.seatCardWaiting
+                    : styles.seatCardIdle;
               return (
                 <div
                   key={p.id}
                   className={styles.seat}
                   style={{ left: `${left}%`, top: `${top}%` }}
                 >
-                  <Avatar name={p.name} avatarUrl={p.avatarUrl} size={44} />
+                  <div className={`${styles.seatCard} ${cardClass}`}>
+                    {revealed ? value ?? '—' : ''}
+                  </div>
+                  <Avatar name={p.name} avatarUrl={p.avatarUrl} size={40} />
                   <span className={styles.seatName}>
                     {p.name}
                     {p.id === self?.participantId && ' (вы)'}
                   </span>
-                  {chip}
                 </div>
               );
             })}
