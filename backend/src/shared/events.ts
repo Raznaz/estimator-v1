@@ -17,6 +17,7 @@ export const ClientEvents = {
   RESET_ROUND: 'round:reset',
   SELECT_TICKET: 'ticket:select',
   CREATE_TICKET: 'ticket:create',
+  SET_ROLE: 'participant:role',
 } as const;
 
 /** События, которые сервер шлёт клиентам */
@@ -60,6 +61,11 @@ export interface SelectTicketPayload {
 /** Создание тикета. Комната определяется по сокет-сессии (где участник состоит). */
 export interface CreateTicketPayload {
   title?: string;
+}
+
+/** Смена своей роли: голосующий ⇄ наблюдатель. */
+export interface SetRolePayload {
+  role: ParticipantRole;
 }
 
 // --- Payload'ы серверных событий ---

@@ -86,13 +86,33 @@ export class PokerService {
     await this.prisma.round.create({ data: { ticketId } });
   }
 
-  /** Раскрыть текущий раунд (только владелец). */
+  /** Раскрыть текущий раунд (только владелец) и зафиксировать среднюю оценку тикета. */
   async revealRound(roomId: string, userId: string, roundId: string): Promise<void> {
     await this.assertOwner(roomId, userId);
-    await this.prisma.round.update({
+    const round = await this.prisma.round.update({
       where: { id: roundId },
       data: { status: 'REVEALED', revealedAt: new Date() },
     });
+    // Считаем среднее по числовым голосам и сохраняем как результат тикета.
+    // Статус оставляем VOTING — тикет остаётся активным (показываем результат и
+    // даём «переголосовать»); в историю он уйдёт, когда выберут следующий тикет.
+    const votes = await this.prisma.vote.findMany({ where: { roundId } });
+    const estimate = averageEstimate(votes.map((v) => v.value));
+    await this.prisma.ticket.update({
+      where: { id: round.ticketId },
+      data: { finalEstimate: estimate },
+    });
+  }
+
+  /** Сменить роль участника (голосующий ⇄ наблюдатель). Доступно самому участнику. */
+  async setRole(participantId: string, role: ParticipantRole): Promise<void> {
+    await this.prisma.participant.update({ where: { id: participantId }, data: { role } });
+    // Наблюдателя не ждём за столом — снимаем его голос в открытых раундах.
+    if (role === 'SPECTATOR') {
+      await this.prisma.vote.deleteMany({
+        where: { participantId, round: { status: 'VOTING' } },
+      });
+    }
   }
 
   /** Переголосовать: открыть новый раунд по тикету (только владелец). */
@@ -171,6 +191,15 @@ export class PokerService {
       throw new ForbiddenException('Действие доступно только владельцу комнаты');
     }
   }
+}
+
+/** Среднее по числовым голосам (спецкарты ?, ☕ и нечисловые шкалы игнорируются). */
+function averageEstimate(values: string[]): string | null {
+  const nums = values
+    .filter((v) => v.trim() !== '' && !Number.isNaN(Number(v)))
+    .map(Number);
+  if (nums.length === 0) return null;
+  return (nums.reduce((a, b) => a + b, 0) / nums.length).toFixed(1);
 }
 
 function buildPublicVote(vote: PrismaVote, revealed: boolean): PublicVote {

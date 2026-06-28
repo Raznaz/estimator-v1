@@ -4,10 +4,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { getSocket } from '@/lib/socket';
 import { getAccessToken } from '@/lib/auth-storage';
 import { getDisplayName, setDisplayName } from '@/lib/room-session';
+import { resolveAvatarUrl } from '@/lib/avatar';
+import { useRoomHeader } from '@/lib/room-header-context';
 import {
   ClientEvents,
   SCALES,
+  SPECIAL_CARDS,
   ServerEvents,
+  type ParticipantRole,
   type ParticipantView,
   type RoomStatePayload,
 } from '@/shared';
@@ -27,8 +31,9 @@ export default function RoomClient({ code }: { code: string }) {
   const [self, setSelf] = useState<SelfInfo | null>(null);
   const [myVote, setMyVote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   const [newTitle, setNewTitle] = useState('');
+
+  const { setInfo } = useRoomHeader();
 
   // Определяем отображаемое имя из localStorage (или ждём ввода в гейте).
   useEffect(() => {
@@ -70,15 +75,39 @@ export default function RoomClient({ code }: { code: string }) {
     setMyVote(null);
   }, [roundId]);
 
+  // Прокидываем код/название комнаты в глобальный хедер (с кнопкой приглашения).
+  const roomName = state?.room.name ?? null;
+  useEffect(() => {
+    setInfo({ code, name: roomName });
+    return () => setInfo(null);
+  }, [code, roomName, setInfo]);
+
   const me = useMemo(
     () => state?.participants.find((p) => p.id === self?.participantId) ?? null,
     [state, self],
   );
   const isOwner = me?.isOwner ?? false;
+  const isSpectator = me?.role === 'SPECTATOR';
   const deck = state ? SCALES[state.room.scaleType] : [];
   const currentRound = state?.currentRound ?? null;
   const revealed = currentRound?.status === 'REVEALED';
   const activeTicket = state?.tickets.find((t) => t.id === state.activeTicketId) ?? null;
+  const canVote = Boolean(currentRound) && !revealed && !isSpectator;
+
+  // За столом сидят только голосующие; наблюдатели — только в списке справа.
+  const voters = useMemo(
+    () => state?.participants.filter((p) => p.role === 'VOTER') ?? [],
+    [state],
+  );
+
+  // История — оценённые тикеты (со средним), кроме текущего активного.
+  const history = useMemo(
+    () =>
+      state?.tickets.filter(
+        (t) => t.finalEstimate != null && t.id !== state.activeTicketId,
+      ) ?? [],
+    [state],
+  );
 
   const voteValueByParticipant = useMemo(() => {
     const map = new Map<string, string>();
@@ -87,16 +116,6 @@ export default function RoomClient({ code }: { code: string }) {
     });
     return map;
   }, [state]);
-
-  const average = useMemo(() => {
-    if (!revealed) return null;
-    const nums = (state?.votes ?? [])
-      .map((v) => v.value)
-      .filter((v): v is string => v !== undefined && v.trim() !== '' && !Number.isNaN(Number(v)))
-      .map(Number);
-    if (nums.length === 0) return null;
-    return (nums.reduce((a, b) => a + b, 0) / nums.length).toFixed(1);
-  }, [revealed, state]);
 
   function handleNameSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -107,7 +126,7 @@ export default function RoomClient({ code }: { code: string }) {
   }
 
   function castVote(value: string) {
-    if (!currentRound || revealed) return;
+    if (!canVote || !currentRound) return;
     setMyVote(value);
     getSocket().emit(ClientEvents.CAST_VOTE, { roundId: currentRound.id, value });
   }
@@ -118,11 +137,6 @@ export default function RoomClient({ code }: { code: string }) {
     setNewTitle('');
   }
 
-  function selectTicket(ticketId: string) {
-    if (!isOwner) return;
-    getSocket().emit(ClientEvents.SELECT_TICKET, { ticketId });
-  }
-
   function reveal() {
     if (currentRound) getSocket().emit(ClientEvents.REVEAL_ROUND, { roundId: currentRound.id });
   }
@@ -131,15 +145,9 @@ export default function RoomClient({ code }: { code: string }) {
     if (activeTicket) getSocket().emit(ClientEvents.RESET_ROUND, { ticketId: activeTicket.id });
   }
 
-  async function copyInvite() {
-    const url = `${window.location.origin}/room/${code}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setError('Не удалось скопировать ссылку');
-    }
+  function toggleObserver() {
+    const role: ParticipantRole = isSpectator ? 'VOTER' : 'SPECTATOR';
+    getSocket().emit(ClientEvents.SET_ROLE, { role });
   }
 
   // Гейт имени для входа по ссылке-приглашению.
@@ -167,132 +175,192 @@ export default function RoomClient({ code }: { code: string }) {
   }
 
   return (
-    <div>
-      <div className={styles.topbar}>
-        <div>
-          <span className={styles.roomLabel}>Комната</span>{' '}
-          <strong className={styles.roomCode}>{code}</strong>
-          {state && <span className={styles.roomName}> · {state.room.name}</span>}
-        </div>
-        <button className={styles.inviteButton} onClick={copyInvite} type="button">
-          🔗 {copied ? 'Ссылка скопирована!' : 'Скопировать ссылку приглашения'}
-        </button>
-      </div>
-
+    <div className={styles.page}>
       {error && <p className={styles.errorBanner}>{error}</p>}
 
-      <div className={styles.room}>
-        <div className={styles.board}>
-          <section className={styles.ticketsPanel}>
-            <div className={styles.ticketsHeader}>
-              <h3 className={styles.panelTitle}>Задачи</h3>
-            </div>
+      <div className={styles.layout}>
+        <main className={styles.stage}>
+          <div className={styles.stageHeader}>
             {isOwner && (
               <form className={styles.newTicketForm} onSubmit={createTicket}>
                 <input
                   className={styles.input}
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="Название задачи (необязательно)"
+                  placeholder="Название новой задачи (необязательно)"
                   maxLength={120}
                 />
                 <button className={styles.smallButton} type="submit">
-                  Новая
+                  Создать тикет
                 </button>
               </form>
             )}
-            <ul className={styles.ticketList}>
-              {state?.tickets.length === 0 && (
-                <li className={styles.empty}>Пока нет задач</li>
-              )}
-              {state?.tickets.map((ticket) => {
-                const isActive = ticket.id === state.activeTicketId;
-                return (
-                  <li
-                    key={ticket.id}
-                    className={`${styles.ticketItem} ${isActive ? styles.ticketActive : ''} ${
-                      isOwner ? styles.ticketClickable : ''
-                    }`}
-                    onClick={() => selectTicket(ticket.id)}
-                  >
-                    <span className={styles.ticketTitle}>{ticket.title}</span>
-                    {ticket.finalEstimate && (
-                      <span className={styles.ticketEstimate}>{ticket.finalEstimate}</span>
-                    )}
-                    {isActive && <span className={styles.ticketBadge}>на оценке</span>}
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
 
-          <section className={styles.votePanel}>
             {activeTicket ? (
-              <>
-                <h3 className={styles.panelTitle}>{activeTicket.title}</h3>
-                {!revealed ? (
-                  <>
-                    <p className={styles.hint}>Выберите карту:</p>
-                    <div className={styles.cards}>
-                      {deck.map((card) => (
-                        <button
-                          key={card}
-                          type="button"
-                          className={`${styles.cardButton} ${
-                            myVote === card ? styles.cardSelected : ''
-                          }`}
-                          onClick={() => castVote(card)}
-                        >
-                          {card}
-                        </button>
-                      ))}
-                    </div>
-                    {isOwner && (
-                      <button className={styles.actionButton} type="button" onClick={reveal}>
-                        Раскрыть голоса
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  <div className={styles.results}>
-                    <p className={styles.resultLine}>
-                      Среднее: <strong>{average ?? '—'}</strong>
-                    </p>
-                    {isOwner && (
-                      <button className={styles.actionButton} type="button" onClick={resetRound}>
-                        Переголосовать
-                      </button>
-                    )}
-                  </div>
-                )}
-              </>
+              <div className={styles.activeInfo}>
+                <h2 className={styles.activeTitle}>{activeTicket.title}</h2>
+                <div className={styles.activeStatus}>
+                  {revealed ? (
+                    <span className={styles.average}>
+                      Среднее: <strong>{activeTicket.finalEstimate ?? '—'}</strong>
+                    </span>
+                  ) : (
+                    <span className={styles.statusVoting}>Идёт голосование…</span>
+                  )}
+                  {isOwner && !revealed && (
+                    <button className={styles.actionButton} type="button" onClick={reveal}>
+                      Раскрыть голоса
+                    </button>
+                  )}
+                  {isOwner && revealed && (
+                    <button className={styles.actionButton} type="button" onClick={resetRound}>
+                      Переголосовать
+                    </button>
+                  )}
+                </div>
+              </div>
             ) : (
               <p className={styles.empty}>
                 {isOwner
-                  ? 'Выберите задачу из списка, чтобы начать голосование.'
-                  : 'Ожидаем, когда владелец выберет задачу для оценки.'}
+                  ? 'Создайте задачу — голосование начнётся автоматически.'
+                  : 'Ожидаем, когда владелец создаст задачу для оценки.'}
               </p>
             )}
-          </section>
-        </div>
+          </div>
+
+          <div className={styles.tableWrap}>
+            <div className={styles.tableOval}>
+              <span className={styles.tableLabel}>
+                {voters.length > 0 ? `${voters.length} за столом` : 'Стол пуст'}
+              </span>
+            </div>
+            {voters.map((p, i) => {
+              const angle = (i / voters.length) * 2 * Math.PI - Math.PI / 2;
+              const left = 50 + 44 * Math.cos(angle);
+              const top = 50 + 44 * Math.sin(angle);
+              const value = voteValueByParticipant.get(p.id);
+              let chip: React.ReactNode = null;
+              if (revealed) {
+                chip = <span className={styles.seatValue}>{value ?? '—'}</span>;
+              } else if (currentRound) {
+                chip = <span className={styles.seatStatus}>{p.hasVoted ? '✅' : '⏳'}</span>;
+              }
+              return (
+                <div
+                  key={p.id}
+                  className={styles.seat}
+                  style={{ left: `${left}%`, top: `${top}%` }}
+                >
+                  <Avatar name={p.name} avatarUrl={p.avatarUrl} size={44} />
+                  <span className={styles.seatName}>
+                    {p.name}
+                    {p.id === self?.participantId && ' (вы)'}
+                  </span>
+                  {chip}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className={styles.bottomBar}>
+            <div className={styles.deck}>
+              {deck.map((card) => {
+                // Чашка кофе — это переключатель режима наблюдателя, а не голос.
+                // Доступна всегда (даже вне голосования) и подсвечена для наблюдателя.
+                if (card === SPECIAL_CARDS.COFFEE) {
+                  return (
+                    <button
+                      key={card}
+                      type="button"
+                      className={`${styles.cardButton} ${styles.coffeeCard} ${
+                        isSpectator ? styles.coffeeActive : ''
+                      }`}
+                      onClick={toggleObserver}
+                      title="Режим наблюдателя"
+                    >
+                      ☕
+                    </button>
+                  );
+                }
+                return (
+                  <button
+                    key={card}
+                    type="button"
+                    disabled={!canVote}
+                    className={`${styles.cardButton} ${canVote ? '' : styles.cardIdle} ${
+                      myVote === card ? styles.cardSelected : ''
+                    }`}
+                    onClick={() => castVote(card)}
+                  >
+                    {card}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </main>
 
         <aside className={styles.sidebar}>
-          <h3 className={styles.panelTitle}>Участники ({state?.participants.length ?? 0})</h3>
-          <ul className={styles.participantList}>
-            {state?.participants.map((p) => (
-              <ParticipantRow
-                key={p.id}
-                participant={p}
-                isMe={p.id === self?.participantId}
-                revealed={revealed}
-                value={voteValueByParticipant.get(p.id)}
-                votingActive={Boolean(currentRound) && !revealed}
-              />
-            ))}
-          </ul>
+          <section className={styles.panel}>
+            <h3 className={styles.panelTitle}>Участники ({state?.participants.length ?? 0})</h3>
+            <ul className={styles.participantList}>
+              {state?.participants.map((p) => (
+                <ParticipantRow
+                  key={p.id}
+                  participant={p}
+                  isMe={p.id === self?.participantId}
+                  revealed={revealed}
+                  value={voteValueByParticipant.get(p.id)}
+                  votingActive={Boolean(currentRound) && !revealed}
+                />
+              ))}
+            </ul>
+          </section>
+
+          <section className={styles.panel}>
+            <h3 className={styles.panelTitle}>История</h3>
+            {history.length === 0 ? (
+              <p className={styles.empty}>Оценённых задач пока нет</p>
+            ) : (
+              <ul className={styles.historyList}>
+                {history.map((t) => (
+                  <li key={t.id} className={styles.historyItem}>
+                    <span className={styles.historyTitle}>{t.title}</span>
+                    <span className={styles.historyEstimate}>{t.finalEstimate}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
         </aside>
       </div>
     </div>
+  );
+}
+
+/** Аватар участника: картинка (пресет/загруженная) либо инициал-заглушка. */
+function Avatar({
+  name,
+  avatarUrl,
+  size,
+}: {
+  name: string;
+  avatarUrl?: string | null;
+  size: number;
+}) {
+  const url = resolveAvatarUrl(avatarUrl);
+  const dimension = { width: size, height: size };
+  if (url) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img className={styles.avatarImg} style={dimension} src={url} alt={name} />;
+  }
+  return (
+    <span
+      className={styles.avatarFallback}
+      style={{ ...dimension, fontSize: size * 0.4 }}
+    >
+      {name.charAt(0).toUpperCase()}
+    </span>
   );
 }
 
@@ -309,16 +377,19 @@ function ParticipantRow({
   value?: string;
   votingActive: boolean;
 }) {
+  const isSpectator = participant.role === 'SPECTATOR';
   let statusNode: React.ReactNode = null;
-  if (revealed) {
+  if (isSpectator) {
+    statusNode = <span className={styles.spectatorBadge}>наблюдатель</span>;
+  } else if (revealed) {
     statusNode = <span className={styles.voteValue}>{value ?? '—'}</span>;
   } else if (votingActive) {
     statusNode = <span>{participant.hasVoted ? '✅' : '⏳'}</span>;
   }
 
   return (
-    <li className={styles.participantRow}>
-      <span className={styles.avatar}>{participant.name.charAt(0).toUpperCase()}</span>
+    <li className={`${styles.participantRow} ${isSpectator ? styles.spectator : ''}`}>
+      <Avatar name={participant.name} avatarUrl={participant.avatarUrl} size={28} />
       <span className={styles.participantName}>
         {participant.name}
         {isMe && <span className={styles.youBadge}> (вы)</span>}

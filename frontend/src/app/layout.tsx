@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { AppHeader } from '@/components/AppHeader';
 import { AuthProvider } from '@/lib/auth-context';
 import { ThemeProvider } from '@/lib/theme-context';
+import { RoomHeaderProvider } from '@/lib/room-header-context';
 import './globals.css';
 import styles from './layout.module.css';
 
@@ -29,10 +30,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <AuthProvider>
           <ThemeProvider>
-            <div className={styles.shell}>
-              <AppHeader />
-              <main className={styles.main}>{children}</main>
-            </div>
+            <RoomHeaderProvider>
+              <div className={styles.shell}>
+                <AppHeader />
+                <main className={styles.main}>{children}</main>
+              </div>
+            </RoomHeaderProvider>
           </ThemeProvider>
         </AuthProvider>
       </body>

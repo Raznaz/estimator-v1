@@ -20,6 +20,7 @@ import {
   type ResetRoundPayload,
   type RevealRoundPayload,
   type SelectTicketPayload,
+  type SetRolePayload,
 } from '../shared';
 import { CreateGuestUserCommand } from '../users/cqrs';
 import { PokerService } from './poker.service';
@@ -123,7 +124,13 @@ export class PokerGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const session = this.sessions.get(client.id);
     if (!session) return;
     try {
-      await this.pokerService.createTicket(session.roomId, session.userId, payload.title);
+      // Создаём тикет и сразу открываем по нему голосование — без отдельного выбора.
+      const ticket = await this.pokerService.createTicket(
+        session.roomId,
+        session.userId,
+        payload.title,
+      );
+      await this.pokerService.selectTicket(session.roomId, session.userId, ticket.id);
       await this.broadcastState(session.roomCode);
     } catch (err) {
       this.emitError(client, errorMessage(err, 'Не удалось создать тикет'));
@@ -200,6 +207,21 @@ export class PokerGateway implements OnGatewayConnection, OnGatewayDisconnect {
       await this.broadcastState(session.roomCode);
     } catch (err) {
       this.emitError(client, errorMessage(err, 'Не удалось переголосовать'));
+    }
+  }
+
+  @SubscribeMessage(ClientEvents.SET_ROLE)
+  async handleSetRole(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: SetRolePayload,
+  ): Promise<void> {
+    const session = this.sessions.get(client.id);
+    if (!session) return;
+    try {
+      await this.pokerService.setRole(session.participantId, payload.role);
+      await this.broadcastState(session.roomCode);
+    } catch (err) {
+      this.emitError(client, errorMessage(err, 'Не удалось сменить роль'));
     }
   }
 }
