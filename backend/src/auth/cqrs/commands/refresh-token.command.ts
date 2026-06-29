@@ -9,6 +9,10 @@ export class RefreshTokenCommand {
   constructor(public readonly refreshToken: string) {}
 }
 
+/**
+ * Проверяет refresh-токен, отзывает его (ротация) и выпускает новую пару.
+ * @throws UnauthorizedException Если токен недействителен или пользователь не найден.
+ */
 @CommandHandler(RefreshTokenCommand)
 export class RefreshTokenHandler implements ICommandHandler<RefreshTokenCommand, AuthResult> {
   constructor(

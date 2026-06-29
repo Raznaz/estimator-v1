@@ -7,6 +7,7 @@ export class CreateGuestUserCommand {
   constructor(public readonly name: string) {}
 }
 
+/** Создаёт гостя — пользователя только с именем, без email и пароля. */
 @CommandHandler(CreateGuestUserCommand)
 export class CreateGuestUserHandler
   implements ICommandHandler<CreateGuestUserCommand, PrismaUser>

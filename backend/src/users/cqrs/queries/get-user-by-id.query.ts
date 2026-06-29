@@ -7,6 +7,7 @@ export class GetUserByIdQuery {
   constructor(public readonly userId: string) {}
 }
 
+/** Возвращает публичный профиль по id или `null`, если пользователь не найден. */
 @QueryHandler(GetUserByIdQuery)
 export class GetUserByIdHandler
   implements IQueryHandler<GetUserByIdQuery, PublicUser | null>

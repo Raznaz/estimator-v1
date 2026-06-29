@@ -14,6 +14,10 @@ export class LoginCommand {
   ) {}
 }
 
+/**
+ * Проверяет email/пароль и выпускает пару токенов.
+ * @throws UnauthorizedException При неверном email или пароле.
+ */
 @CommandHandler(LoginCommand)
 export class LoginHandler implements ICommandHandler<LoginCommand, AuthResult> {
   constructor(

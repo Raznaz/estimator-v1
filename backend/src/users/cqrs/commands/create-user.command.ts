@@ -12,6 +12,7 @@ export class CreateUserCommand {
   ) {}
 }
 
+/** Создаёт запись пользователя; отсутствующие поля сохраняются как `null`. */
 @CommandHandler(CreateUserCommand)
 export class CreateUserHandler implements ICommandHandler<CreateUserCommand, PrismaUser> {
   constructor(private readonly users: UserRepository) {}

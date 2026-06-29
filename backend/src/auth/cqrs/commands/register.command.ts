@@ -15,6 +15,10 @@ export class RegisterCommand {
   ) {}
 }
 
+/**
+ * Создаёт пользователя и сразу выпускает пару токенов.
+ * @throws ConflictException Если email уже занят.
+ */
 @CommandHandler(RegisterCommand)
 export class RegisterHandler implements ICommandHandler<RegisterCommand, AuthResult> {
   constructor(

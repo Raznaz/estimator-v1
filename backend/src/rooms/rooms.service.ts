@@ -8,12 +8,17 @@ import type { Room as PublicRoom, ScaleType } from '../shared';
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const CODE_LENGTH = 6;
 
+/** Данные для создания комнаты; имя и шкала необязательны (есть значения по умолчанию). */
 export interface CreateRoomData {
   ownerId: string;
   name?: string;
   scaleType?: ScaleType;
 }
 
+/**
+ * Бизнес-логика комнат: генерация уникального кода, создание и поиск по коду.
+ * Работает напрямую с Prisma (без CQRS).
+ */
 @Injectable()
 export class RoomsService {
   constructor(private readonly prisma: PrismaService) {}
