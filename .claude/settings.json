@@ -9,7 +9,6 @@
       "WebFetch"
     ],
     "deny": [
-      "Bash(git push *)",
       "Read(.env*)"
     ],
     "ask": [
