@@ -3,6 +3,8 @@
     "allow": [
       "Bash(npm test)",
       "Bash(git *)",
+      "Bash(gh *)",
+      "Bash(bash .claude/skills/pr/scripts/validate.sh)",
       "LS",
       "Glob",
       "Grep",
