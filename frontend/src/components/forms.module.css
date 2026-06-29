@@ -1,15 +1,18 @@
 .card {
   max-width: 420px;
-  margin: 2rem auto;
+  margin: 3rem auto;
   padding: 2rem;
   border: 1px solid var(--color-border);
   background: var(--color-surface);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-2);
 }
 
 .title {
   margin: 0 0 1.5rem;
-  font-size: 1.5rem;
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  letter-spacing: -0.02em;
 }
 
 .form {
@@ -33,18 +36,22 @@
   padding: 0.6rem 0.75rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
-  background: var(--color-bg);
+  background: var(--color-surface-2);
   color: var(--color-text);
   font: inherit;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .input:focus {
   outline: none;
   border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 25%, transparent);
 }
 
 .button {
-  padding: 0.65rem 1rem;
+  padding: 0.7rem 1rem;
   border: none;
   border-radius: var(--radius);
   background: var(--color-accent);
@@ -52,6 +59,11 @@
   font: inherit;
   font-weight: 600;
   cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.button:hover:not(:disabled) {
+  background: var(--color-accent-strong);
 }
 
 .button:disabled {

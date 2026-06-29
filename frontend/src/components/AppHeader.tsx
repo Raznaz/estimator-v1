@@ -33,7 +33,41 @@ export function AppHeader() {
   return (
     <header className={styles.header}>
       <Link href="/" className={styles.brand}>
-        🃏 Estimator
+        <span className={styles.mark} aria-hidden>
+          <svg viewBox="0 0 28 28" width="28" height="28">
+            <rect
+              x="4"
+              y="7"
+              width="14"
+              height="18"
+              rx="3"
+              fill="var(--color-felt)"
+              transform="rotate(-10 11 16)"
+            />
+            <rect
+              x="10"
+              y="4"
+              width="14"
+              height="18"
+              rx="3"
+              fill="var(--color-accent)"
+              transform="rotate(8 17 13)"
+            />
+            <text
+              x="17"
+              y="16"
+              transform="rotate(8 17 13)"
+              textAnchor="middle"
+              fontFamily="var(--font-display)"
+              fontSize="9"
+              fontWeight="700"
+              fill="var(--color-on-accent)"
+            >
+              8
+            </text>
+          </svg>
+        </span>
+        Estimator
       </Link>
 
       {info && (
