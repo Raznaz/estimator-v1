@@ -1,0 +1,30 @@
+# Render Blueprint для бэкенда Planning Poker (NestJS + WebSocket).
+# Фронтенд деплоится отдельно на Vercel, БД — внешняя (Neon).
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: estimator-api
+    runtime: node
+    plan: free
+    region: frankfurt
+    branch: main
+    # Монорепо npm workspaces: ставим из корня, собираем и мигрируем backend.
+    buildCommand: npm install && npm run build -w backend && npm run prisma:generate -w backend && npm run prisma:deploy -w backend
+    startCommand: node backend/dist/main.js
+    healthCheckPath: /health
+    envVars:
+      # Строка подключения к Neon (pooled). Задать вручную в дашборде.
+      - key: DATABASE_URL
+        sync: false
+      # Секреты JWT генерирует Render при первом деплое.
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: JWT_ACCESS_TTL
+        value: 15m
+      - key: JWT_REFRESH_TTL
+        value: 7d
+      # URL фронтенда на Vercel — для CORS и WebSocket. Задать вручную после деплоя фронта.
+      - key: CORS_ORIGIN
+        sync: false

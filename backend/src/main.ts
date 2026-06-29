@@ -27,14 +27,16 @@ async function bootstrap() {
     .addTag('auth', 'Регистрация, вход, ротация и отзыв токенов')
     .addTag('users', 'Профиль пользователя, пароль и аватары')
     .addTag('rooms', 'Создание комнат и поиск по коду')
+    .addTag('health', 'Проверка доступности сервиса')
     .build();
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('docs', app, document);
 
-  const port = Number(process.env.API_PORT ?? 3001);
-  await app.listen(port);
+  // Хостинги (Render и др.) передают порт через PORT; слушаем на 0.0.0.0.
+  const port = Number(process.env.PORT ?? process.env.API_PORT ?? 3001);
+  await app.listen(port, '0.0.0.0');
   // eslint-disable-next-line no-console
-  console.log(`🚀 API запущен на http://localhost:${port}`);
+  console.log(`🚀 API запущен на порту ${port}`);
 }
 
 bootstrap();

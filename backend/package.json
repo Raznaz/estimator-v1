@@ -8,6 +8,7 @@
     "start": "node dist/main.js",
     "lint": "eslint src --ext .ts",
     "prisma:generate": "prisma generate",
+    "prisma:deploy": "prisma migrate deploy",
     "prisma:migrate": "set -a && . ../.env && set +a && prisma migrate dev",
     "prisma:studio": "set -a && . ../.env && set +a && prisma studio"
   },
