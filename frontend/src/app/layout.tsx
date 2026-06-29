@@ -1,11 +1,27 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import { Inter, Space_Grotesk } from 'next/font/google';
 import { AppHeader } from '@/components/AppHeader';
 import { AuthProvider } from '@/lib/auth-context';
 import { ThemeProvider } from '@/lib/theme-context';
 import { RoomHeaderProvider } from '@/lib/room-header-context';
 import './globals.css';
 import styles from './layout.module.css';
+
+// Inter — тихий рабочий шрифт интерфейса; Space Grotesk — характерный
+// дисплейный для заголовков и крупных чисел на картах. CSS-переменные
+// потребляются токенами в globals.css (--font-body / --font-display).
+const inter = Inter({
+  subsets: ['latin', 'cyrillic'],
+  variable: '--font-inter',
+  display: 'swap',
+});
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  variable: '--font-space-grotesk',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'Estimator — Planning Poker',
@@ -23,7 +39,7 @@ try {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="ru" suppressHydrationWarning>
+    <html lang="ru" className={`${inter.variable} ${spaceGrotesk.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>

@@ -14,10 +14,11 @@
   padding: 0;
   border: 2px solid var(--color-border);
   border-radius: var(--radius);
-  background: var(--color-bg);
+  background: var(--color-surface-2);
   cursor: pointer;
   aspect-ratio: 1;
   overflow: hidden;
+  transition: border-color 0.15s ease;
 }
 
 .option:hover {
@@ -31,6 +32,7 @@
 
 .selected {
   border-color: var(--color-accent);
+  box-shadow: var(--shadow-accent);
 }
 
 .optionImg {
@@ -48,10 +50,11 @@
   padding: 0.55rem 1rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
-  background: var(--color-bg);
+  background: var(--color-surface-2);
   color: var(--color-text);
   font: inherit;
   cursor: pointer;
+  transition: border-color 0.15s ease;
 }
 
 .uploadButton:hover {

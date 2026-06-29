@@ -249,7 +249,12 @@ export default function RoomClient({ code }: { code: string }) {
                   style={{ left: `${left}%`, top: `${top}%` }}
                 >
                   <div className={`${styles.seatCard} ${cardClass}`}>
-                    {revealed ? value ?? '—' : ''}
+                    <div className={styles.seatCardInner}>
+                      <span className={`${styles.seatFace} ${styles.seatFaceBack}`} aria-hidden />
+                      <span className={`${styles.seatFace} ${styles.seatFaceFront}`}>
+                        {value ?? '—'}
+                      </span>
+                    </div>
                   </div>
                   <Avatar name={p.name} avatarUrl={p.avatarUrl} size={40} />
                   <span className={styles.seatName}>
@@ -291,7 +296,8 @@ export default function RoomClient({ code }: { code: string }) {
                     }`}
                     onClick={() => castVote(card)}
                   >
-                    {card}
+                    <span className={styles.cardIndex}>{card}</span>
+                    <span className={styles.cardValue}>{card}</span>
                   </button>
                 );
               })}
