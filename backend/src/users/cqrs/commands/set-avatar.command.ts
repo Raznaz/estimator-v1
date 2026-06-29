@@ -11,6 +11,10 @@ export class SetAvatarCommand {
   ) {}
 }
 
+/**
+ * Проставляет URL аватара пользователю.
+ * @throws NotFoundException Если пользователь не найден.
+ */
 @CommandHandler(SetAvatarCommand)
 export class SetAvatarHandler implements ICommandHandler<SetAvatarCommand, PublicUser> {
   constructor(private readonly users: UserRepository) {}

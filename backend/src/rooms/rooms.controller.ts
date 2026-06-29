@@ -16,6 +16,11 @@ interface CreateRoomResponse {
   refreshToken?: string;
 }
 
+/**
+ * REST-эндпоинты комнат (`/rooms`).
+ * Авторизация опциональна: создавать комнату может и зарегистрированный пользователь,
+ * и аноним (тогда заводится гость-владелец и ему выпускаются токены).
+ */
 @Controller('rooms')
 export class RoomsController {
   constructor(

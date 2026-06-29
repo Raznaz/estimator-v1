@@ -12,6 +12,12 @@ export class ChangePasswordCommand {
   ) {}
 }
 
+/**
+ * Меняет пароль после проверки текущего.
+ * @throws NotFoundException Если пользователь не найден.
+ * @throws BadRequestException Если у пользователя не задан пароль (например, гость).
+ * @throws UnauthorizedException Если текущий пароль неверен.
+ */
 @CommandHandler(ChangePasswordCommand)
 export class ChangePasswordHandler implements ICommandHandler<ChangePasswordCommand, void> {
   constructor(private readonly users: UserRepository) {}

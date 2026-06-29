@@ -13,6 +13,12 @@ export class UpdateProfileCommand {
   ) {}
 }
 
+/**
+ * Обновляет профиль: валидирует URL аватара и уникальность email.
+ * @throws NotFoundException Если пользователь не найден.
+ * @throws BadRequestException При недопустимом URL аватара.
+ * @throws ConflictException Если email занят другим пользователем.
+ */
 @CommandHandler(UpdateProfileCommand)
 export class UpdateProfileHandler
   implements ICommandHandler<UpdateProfileCommand, PublicUser>

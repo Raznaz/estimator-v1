@@ -6,6 +6,7 @@ export class LogoutCommand {
   constructor(public readonly refreshToken: string) {}
 }
 
+/** Идемпотентно отзывает refresh-токен; невалидный токен молча игнорируется. */
 @CommandHandler(LogoutCommand)
 export class LogoutHandler implements ICommandHandler<LogoutCommand, void> {
   constructor(private readonly tokens: AuthTokensService) {}

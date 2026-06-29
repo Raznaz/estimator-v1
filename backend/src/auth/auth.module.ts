@@ -10,6 +10,11 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RefreshTokenRepository } from './repository/refresh-token.repository';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
+/**
+ * Модуль аутентификации: регистрация, вход, ротация и отзыв JWT-токенов.
+ * Экспортирует {@link JwtAuthGuard} и {@link AuthTokensService} для других модулей
+ * (например, для проверки токена при socket-handshake в `poker`).
+ */
 @Module({
   imports: [CqrsModule, UsersModule, PassportModule, JwtModule.register({})],
   controllers: [AuthController],

@@ -10,6 +10,10 @@ export class GetUserByEmailQuery {
   constructor(public readonly email: string) {}
 }
 
+/**
+ * Возвращает Prisma-пользователя (с `passwordHash`) по email или `null`.
+ * Не приводит к публичному виду — рассчитан на внутреннее использование в `auth`.
+ */
 @QueryHandler(GetUserByEmailQuery)
 export class GetUserByEmailHandler
   implements IQueryHandler<GetUserByEmailQuery, PrismaUser | null>

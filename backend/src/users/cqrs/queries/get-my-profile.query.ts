@@ -8,6 +8,10 @@ export class GetMyProfileQuery {
   constructor(public readonly userId: string) {}
 }
 
+/**
+ * Возвращает публичный профиль текущего пользователя.
+ * @throws NotFoundException Если пользователь не найден.
+ */
 @QueryHandler(GetMyProfileQuery)
 export class GetMyProfileHandler implements IQueryHandler<GetMyProfileQuery, PublicUser> {
   constructor(private readonly users: UserRepository) {}

@@ -3,6 +3,7 @@ import type { ScaleType } from '../../shared';
 
 const SCALE_TYPES: ScaleType[] = ['FIBONACCI', 'MODIFIED_FIBONACCI', 'T_SHIRT', 'POWERS_OF_TWO'];
 
+/** Тело запроса `POST /rooms`. */
 export class CreateRoomDto {
   /** Имя владельца-гостя (для зарегистрированных берётся из профиля). */
   @IsOptional()
