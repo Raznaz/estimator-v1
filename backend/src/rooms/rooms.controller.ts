@@ -1,26 +1,32 @@
 import { BadRequestException, Body, Controller, Get, Headers, Param, Post } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import type { User as PrismaUser } from '@prisma/client';
+import {
+  ApiBadRequestResponse,
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
 import { AuthTokensService } from '../auth/auth-tokens.service';
-import type { Room as PublicRoom, User as PublicUser } from '../shared';
+import { ApiErrorResponse } from '../common/dto/api-error-response.dto';
+import type { Room as PublicRoom } from '../shared';
 import { CreateGuestUserCommand } from '../users/cqrs';
 import { toPublicUser } from '../users/repository/user.repository';
 import { CreateRoomDto } from './dto/create-room.dto';
+import { CreateRoomResponse } from './dto/responses/create-room-response.dto';
+import { RoomResponse } from './dto/responses/room-response.dto';
 import { RoomsService, toPublicRoom } from './rooms.service';
-
-/** Ответ создания комнаты. Токены присутствуют только для нового гостя-владельца. */
-interface CreateRoomResponse {
-  room: PublicRoom;
-  user?: PublicUser;
-  accessToken?: string;
-  refreshToken?: string;
-}
 
 /**
  * REST-эндпоинты комнат (`/rooms`).
  * Авторизация опциональна: создавать комнату может и зарегистрированный пользователь,
  * и аноним (тогда заводится гость-владелец и ему выпускаются токены).
  */
+@ApiTags('rooms')
 @Controller('rooms')
 export class RoomsController {
   constructor(
@@ -36,6 +42,15 @@ export class RoomsController {
    *   (чтобы при сокет-входе он опознавался как тот же владелец).
    */
   @Post()
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Создать комнату',
+    description:
+      'С валидным Bearer-токеном владельцем становится текущий пользователь (токены не выпускаются). ' +
+      'Без токена создаётся гость по ownerName, и ему выпускается пара токенов.',
+  })
+  @ApiCreatedResponse({ description: 'Комната создана', type: CreateRoomResponse })
+  @ApiBadRequestResponse({ description: 'Не указано имя (ownerName) для гостя', type: ApiErrorResponse })
   async create(
     @Body() dto: CreateRoomDto,
     @Headers('authorization') authHeader?: string,
@@ -75,6 +90,10 @@ export class RoomsController {
 
   /** Получить комнату по коду (для проверки существования перед входом). */
   @Get(':code')
+  @ApiOperation({ summary: 'Получить комнату по коду' })
+  @ApiParam({ name: 'code', description: 'Код комнаты (регистр игнорируется)', example: 'ABCDEF' })
+  @ApiOkResponse({ description: 'Данные комнаты', type: RoomResponse })
+  @ApiNotFoundResponse({ description: 'Комната не найдена или закрыта', type: ApiErrorResponse })
   async findByCode(@Param('code') code: string): Promise<PublicRoom> {
     const room = await this.roomsService.findByCode(code.toUpperCase());
     return toPublicRoom(room);
