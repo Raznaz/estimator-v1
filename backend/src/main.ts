@@ -1,5 +1,6 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -16,6 +17,19 @@ async function bootstrap() {
       transform: true,
     }),
   );
+
+  // Swagger/OpenAPI: UI на /docs, JSON-схема на /docs-json
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('Planning Poker API')
+    .setDescription('REST API инструмента командной оценки тикетов')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .addTag('auth', 'Регистрация, вход, ротация и отзыв токенов')
+    .addTag('users', 'Профиль пользователя, пароль и аватары')
+    .addTag('rooms', 'Создание комнат и поиск по коду')
+    .build();
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('docs', app, document);
 
   const port = Number(process.env.API_PORT ?? 3001);
   await app.listen(port);
