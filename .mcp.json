@@ -8,7 +8,9 @@
       "type": "stdio",
       "command": "npx",
       "args": [
-        "@playwright/mcp@latest"
+        "@playwright/mcp@latest",
+        "--output-dir",
+        "/Users/nazraz/DEV/Practice/AI/estimator-v1/screenshots"
       ],
       "env": {}
     }
