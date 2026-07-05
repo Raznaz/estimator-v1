@@ -226,8 +226,16 @@
 }
 
 .seat {
+  /* Радиус рассадки и масштаб места — переменные, чтобы круг сжимался под
+     ширину экрана (см. медиазапросы). Направление места приходит из JS
+     (--seat-cos / --seat-sin). */
+  --seat-radius-x: 46%;
+  --seat-radius-y: 46%;
+  --seat-scale: 1;
   position: absolute;
-  transform: translate(-50%, -50%);
+  left: calc(50% + var(--seat-radius-x) * var(--seat-cos));
+  top: calc(50% + var(--seat-radius-y) * var(--seat-sin));
+  transform: translate(-50%, -50%) scale(var(--seat-scale));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -593,7 +601,14 @@
 
   .tableWrap {
     flex: none;
-    margin: 0 auto;
+    /* Верхний отступ: верхнее место «выступает» над столом — даём ему клиренс,
+       чтобы карта не заходила под хедер в одноколоночной раскладке. */
+    margin: 3rem auto 0;
+  }
+
+  /* Планшет: слегка ужимаем круг рассадки. */
+  .seat {
+    --seat-scale: 0.9;
   }
 
   .sidebar {
@@ -618,5 +633,34 @@
     border-left: none;
     border-right: none;
     border-bottom: none;
+  }
+}
+
+/* Узкие экраны (телефоны): круг рассадки компактнее — уменьшаем сам стол,
+   масштаб мест и радиус, чтобы карты и подписи не налезали на сукно и края. */
+@media (max-width: 560px) {
+  .tableWrap {
+    max-width: 340px;
+    max-height: 320px;
+  }
+
+  .seat {
+    --seat-scale: 0.72;
+    --seat-radius-x: 48%;
+    --seat-radius-y: 44%;
+  }
+
+  .activeTitle {
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .tableWrap {
+    max-width: 300px;
+  }
+
+  .seat {
+    --seat-scale: 0.64;
   }
 }

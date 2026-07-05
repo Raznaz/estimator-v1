@@ -232,8 +232,12 @@ export default function RoomClient({ code }: { code: string }) {
             </div>
             {voters.map((p, i) => {
               const angle = (i / voters.length) * 2 * Math.PI - Math.PI / 2;
-              const left = 50 + 46 * Math.cos(angle);
-              const top = 50 + 46 * Math.sin(angle);
+              // Радиус рассадки задаётся в CSS (--seat-radius-*), чтобы масштабировать
+              // круг под ширину экрана; JS отдаёт только направление места.
+              const seatVars = {
+                '--seat-cos': Math.cos(angle),
+                '--seat-sin': Math.sin(angle),
+              } as React.CSSProperties;
               const value = voteValueByParticipant.get(p.id);
               const cardClass = revealed
                 ? styles.seatCardRevealed
@@ -243,11 +247,7 @@ export default function RoomClient({ code }: { code: string }) {
                     ? styles.seatCardWaiting
                     : styles.seatCardIdle;
               return (
-                <div
-                  key={p.id}
-                  className={styles.seat}
-                  style={{ left: `${left}%`, top: `${top}%` }}
-                >
+                <div key={p.id} className={styles.seat} style={seatVars}>
                   <div className={`${styles.seatCard} ${cardClass}`}>
                     <div className={styles.seatCardInner}>
                       <span className={`${styles.seatFace} ${styles.seatFaceBack}`} aria-hidden />
