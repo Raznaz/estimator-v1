@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { CqrsModule } from '@nestjs/cqrs';
-import { HealthController } from './health.controller';
+import { HealthController } from './health/health.controller';
 import { PrismaModule } from './prisma/prisma.module';
 import { RoomsModule } from './rooms/rooms.module';
 import { TicketsModule } from './tickets/tickets.module';
@@ -11,7 +11,12 @@ import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, envFilePath: '../.env' }),
+    // В проде (Docker) .env-файла нет — конфиг приходит из переменных процесса.
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: ['.env', '../.env'],
+      ignoreEnvFile: process.env.NODE_ENV === 'production',
+    }),
     CqrsModule.forRoot(),
     PrismaModule,
     UsersModule,

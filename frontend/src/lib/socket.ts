@@ -15,7 +15,8 @@ export function getSocket(): Socket {
   if (!socket) {
     socket = io(API_URL, {
       autoConnect: false,
-      transports: ['websocket'],
+      // polling — фолбэк для сетей и прокси, режущих WebSocket-апгрейд.
+      transports: ['websocket', 'polling'],
     });
   }
   const token = getAccessToken();

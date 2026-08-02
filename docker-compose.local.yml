@@ -1,0 +1,30 @@
+# Override для локальной проверки прод-стека на своей машине.
+#
+# Отличия от прода:
+#   - локально собранные образы вместо GHCR;
+#   - обычный HTTP на портах 8080/8081 вместо HTTPS на 80/443
+#     (Let's Encrypt не выпустит сертификат для localhost);
+#   - отдельное имя проекта и свои имена контейнеров — чтобы стек НЕ пересоздал
+#     dev-контейнер postgres из docker-compose.yml и не трогал его том с данными.
+#
+# Запуск — см. infra/README.md, раздел «Локальная проверка».
+
+name: estimator-local
+
+services:
+  caddy:
+    container_name: estimator-local-caddy
+    ports: !override
+      - '8080:8080'
+      - '8081:8081'
+
+  frontend:
+    container_name: estimator-local-frontend
+    image: estimator-frontend:local
+
+  backend:
+    container_name: estimator-local-backend
+    image: estimator-backend:local
+
+  postgres:
+    container_name: estimator-local-postgres

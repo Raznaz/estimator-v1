@@ -1,0 +1,28 @@
+# Caddy: единственная точка входа снаружи.
+# Домены берутся из переменных окружения (заданы в .env.prod и проброшены в контейнер).
+#
+# Caddy сам выпускает и продлевает сертификаты Let's Encrypt для этих доменов
+# и корректно проксирует WebSocket-апгрейды — отдельная настройка для socket.io не нужна.
+
+# Фронтенд. APP_DOMAIN может содержать несколько доменов через запятую,
+# например: "example.com, www.example.com"
+{$APP_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy frontend:3000
+
+	log {
+		output stdout
+		format console
+	}
+}
+
+# API + WebSocket.
+{$API_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy backend:3001
+
+	log {
+		output stdout
+		format console
+	}
+}

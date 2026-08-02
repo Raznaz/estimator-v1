@@ -194,7 +194,7 @@ export class PokerService {
 }
 
 /** Среднее по числовым голосам (спецкарты ?, ☕ и нечисловые шкалы игнорируются). */
-function averageEstimate(values: string[]): string | null {
+export function averageEstimate(values: string[]): string | null {
   const nums = values
     .filter((v) => v.trim() !== '' && !Number.isNaN(Number(v)))
     .map(Number);

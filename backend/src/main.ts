@@ -6,8 +6,12 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // CORS_ORIGIN — один или несколько origin'ов через запятую (напр. apex + www).
   app.enableCors({
-    origin: process.env.CORS_ORIGIN ?? 'http://localhost:3000',
+    origin: (process.env.CORS_ORIGIN ?? 'http://localhost:3000')
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean),
     credentials: true,
   });
 
@@ -35,7 +39,6 @@ async function bootstrap() {
   // Хостинги (Render и др.) передают порт через PORT; слушаем на 0.0.0.0.
   const port = Number(process.env.PORT ?? process.env.API_PORT ?? 3001);
   await app.listen(port, '0.0.0.0');
-  // eslint-disable-next-line no-console
   console.log(`🚀 API запущен на порту ${port}`);
 }
 

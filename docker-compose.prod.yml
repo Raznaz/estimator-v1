@@ -1,0 +1,98 @@
+# Прод-стек Planning Poker: Caddy (TLS + reverse-proxy), frontend, backend, PostgreSQL.
+#
+# На сервере лежит в /opt/estimator/ рядом с Caddyfile и .env.prod.
+# Запуск:  docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+#
+# Локальная проверка (образы из локальной сборки, без TLS) — см. infra/README.md.
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: estimator-caddy
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp' # HTTP/3
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data # выпущенные сертификаты — переживают пересоздание контейнера
+      - caddy_config:/config
+    environment:
+      # Домены подставляются в Caddyfile из окружения.
+      APP_DOMAIN: ${APP_DOMAIN}
+      API_DOMAIN: ${API_DOMAIN}
+    depends_on:
+      - frontend
+      - backend
+    networks: [estimator]
+
+  frontend:
+    image: ${FRONTEND_IMAGE:-ghcr.io/nazraz/estimator-frontend}:${IMAGE_TAG:-latest}
+    container_name: estimator-frontend
+    restart: unless-stopped
+    # Порт наружу не публикуем — доступ только через Caddy.
+    expose:
+      - '3000'
+    networks: [estimator]
+
+  backend:
+    image: ${BACKEND_IMAGE:-ghcr.io/nazraz/estimator-backend}:${IMAGE_TAG:-latest}
+    container_name: estimator-backend
+    restart: unless-stopped
+    expose:
+      - '3001'
+    environment:
+      NODE_ENV: production
+      PORT: '3001'
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      CORS_ORIGIN: ${CORS_ORIGIN}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
+      JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-7d}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      # /health ходит в БД — контейнер считается здоровым только с живой базой.
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "require('http').get('http://127.0.0.1:3001/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks: [estimator]
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: estimator-postgres
+    restart: unless-stopped
+    # Порт НЕ публикуем наружу: база доступна только из docker-сети.
+    # Для отладки с сервера: docker compose exec postgres psql -U <user> <db>
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - estimator_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [estimator]
+
+volumes:
+  estimator_pgdata:
+  caddy_data:
+  caddy_config:
+
+networks:
+  estimator:
+    driver: bridge

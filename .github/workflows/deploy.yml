@@ -1,0 +1,123 @@
+name: Deploy
+
+# Деплой на прод: при push в main и вручную из UI (вкладка Actions → Run workflow).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Два деплоя одновременно на один сервер — гонка. Ставим в очередь, не отменяя:
+# уже начатый деплой должен завершиться, иначе сервер останется в промежуточном виде.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/estimator
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1. Сборка образов и публикация в GitHub Container Registry.
+  # ---------------------------------------------------------------------------
+  build:
+    name: Сборка образа (${{ matrix.app }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write # право пушить в GHCR
+
+    strategy:
+      matrix:
+        app: [backend, frontend]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Логин в GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }} # выдаётся Actions автоматически
+
+      - name: Сборка и публикация
+        uses: docker/build-push-action@v6
+        with:
+          context: . # контекст — корень монорепы
+          file: ${{ matrix.app }}/Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-${{ matrix.app }}:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}-${{ matrix.app }}:latest
+          # Адрес API вшивается в бандл фронта на этапе сборки — поменять его
+          # в рантайме нельзя. Для backend аргумент просто игнорируется.
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ---------------------------------------------------------------------------
+  # 2. Выкатка на VPS по SSH.
+  #    Включается переменной репозитория DEPLOY_ENABLED=true (см. infra/README.md).
+  #    До настройки сервера образы просто собираются, а этот job пропускается.
+  # ---------------------------------------------------------------------------
+  deploy:
+    name: Выкатка на сервер
+    needs: build
+    if: vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Обновление стека на сервере
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script_stop: true # прервать при первой же ошибке
+          script: |
+            set -e
+            cd /opt/estimator
+
+            # Тег образов — SHA текущего коммита; пишем в .env.prod,
+            # чтобы docker compose и последующие ручные команды видели ту же версию.
+            sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=${{ github.sha }}|" .env.prod
+
+            docker compose -f docker-compose.prod.yml --env-file .env.prod pull
+
+            # Миграции — отдельным одноразовым контейнером, ДО перезапуска сервисов.
+            docker compose -f docker-compose.prod.yml --env-file .env.prod \
+              run --rm backend npx prisma migrate deploy
+
+            docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+
+            # Убираем образы прошлых версий, чтобы не забить диск.
+            docker image prune -f
+
+      - name: Проверка, что прод действительно жив
+        # Без этого шага упавший после деплоя сервис остался бы зелёным в Actions.
+        run: |
+          set -e
+          echo "Ждём, пока сервисы поднимутся…"
+          for i in $(seq 1 12); do
+            if curl -fsS "https://${{ vars.API_DOMAIN }}/health" > /dev/null; then
+              break
+            fi
+            if [ "$i" = "12" ]; then
+              echo "::error::API не отвечает на /health после деплоя"
+              exit 1
+            fi
+            sleep 5
+          done
+
+          echo "Ответ /health:"
+          curl -fsS "https://${{ vars.API_DOMAIN }}/health"
+          echo
+
+          echo "Проверяем фронтенд…"
+          curl -fsS -o /dev/null "https://${{ vars.APP_DOMAIN }}"
+          echo "Деплой успешен."

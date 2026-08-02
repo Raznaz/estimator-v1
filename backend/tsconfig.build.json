@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "//": "Конфиг для nest build: исключает тесты, чтобы они не попадали в dist и в прод-образ.",
+  "exclude": ["node_modules", "dist", "**/*.spec.ts", "**/*.test.ts"]
+}

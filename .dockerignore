@@ -1,0 +1,35 @@
+# Всё, что не должно попадать в контекст сборки Docker.
+# Контекст — корень монорепы (образы собираются из корня, см. docker-compose.prod.yml).
+
+node_modules
+**/node_modules
+
+# Артефакты сборки — образ собирает их сам
+dist
+**/dist
+.next
+**/.next
+
+# Секреты и локальное окружение
+.env
+.env.*
+!.env.example
+
+# Git и CI
+.git
+.github
+.gitignore
+
+# Инструменты и служебное
+.claude
+.vscode
+.idea
+graphify-out
+uploads
+**/uploads
+*.log
+.DS_Store
+
+# Документация — на рантайм не влияет
+*.md
+!README.md

@@ -1,0 +1,50 @@
+name: CI
+
+# Проверки кода: на каждый PR и на push в main.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Новый push в ту же ветку отменяет предыдущий незавершённый прогон —
+# не тратим раннеры на устаревшие коммиты.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Линт, типы, тесты, сборка
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # npm ci ставит строго по package-lock.json — воспроизводимо и быстрее install.
+      - name: Установка зависимостей
+        run: npm ci
+
+      # Без сгенерированного Prisma Client не пройдут ни typecheck, ни сборка backend.
+      - name: Генерация Prisma Client
+        run: npx prisma generate --schema backend/prisma/schema.prisma
+
+      - name: Линт
+        run: npm run lint
+
+      - name: Проверка типов
+        run: npm run typecheck
+
+      - name: Тесты
+        run: npm run test
+
+      - name: Сборка
+        # Значение фиктивное: на этом шаге важно, что сборка проходит,
+        # а реальный адрес API вшивается при сборке Docker-образа в deploy.yml.
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3001
+        run: npm run build
