@@ -28,7 +28,8 @@ services:
     networks: [estimator]
 
   frontend:
-    image: ${FRONTEND_IMAGE:-ghcr.io/nazraz/estimator-frontend}:${IMAGE_TAG:-latest}
+    # Имя владельца в образе — только строчными буквами (требование Docker).
+    image: ${FRONTEND_IMAGE:-ghcr.io/raznaz/estimator-frontend}:${IMAGE_TAG:-latest}
     container_name: estimator-frontend
     restart: unless-stopped
     # Порт наружу не публикуем — доступ только через Caddy.
@@ -37,7 +38,7 @@ services:
     networks: [estimator]
 
   backend:
-    image: ${BACKEND_IMAGE:-ghcr.io/nazraz/estimator-backend}:${IMAGE_TAG:-latest}
+    image: ${BACKEND_IMAGE:-ghcr.io/raznaz/estimator-backend}:${IMAGE_TAG:-latest}
     container_name: estimator-backend
     restart: unless-stopped
     expose:
