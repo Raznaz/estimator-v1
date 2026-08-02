@@ -14,7 +14,6 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/estimator
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -32,26 +31,35 @@ jobs:
         app: [backend, frontend]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
+
+      # Имя владельца в GitHub может содержать заглавные буквы (Raznaz),
+      # а Docker требует имя репозитория строчными. Приводим здесь.
+      - name: Имя владельца строчными буквами
+        id: owner
+        run: |
+          lc=$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
+          echo "lc=$lc" >> "$GITHUB_OUTPUT"
+          echo "Образы будут публиковаться в ghcr.io/$lc/estimator-*"
 
       - name: Логин в GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }} # выдаётся Actions автоматически
 
       - name: Сборка и публикация
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: . # контекст — корень монорепы
           file: ${{ matrix.app }}/Dockerfile
           push: true
           tags: |
-            ${{ env.IMAGE_PREFIX }}-${{ matrix.app }}:${{ github.sha }}
-            ${{ env.IMAGE_PREFIX }}-${{ matrix.app }}:latest
+            ${{ env.REGISTRY }}/${{ steps.owner.outputs.lc }}/estimator-${{ matrix.app }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ steps.owner.outputs.lc }}/estimator-${{ matrix.app }}:latest
           # Адрес API вшивается в бандл фронта на этапе сборки — поменять его
           # в рантайме нельзя. Для backend аргумент просто игнорируется.
           build-args: |
