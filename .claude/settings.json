@@ -5,6 +5,8 @@
       "Bash(git *)",
       "Bash(gh *)",
       "Bash(bash .claude/skills/pr/scripts/validate.sh)",
+      "Bash(npx openspec:*)",
+      "Bash(npm run spec:*)",
       "LS",
       "Glob",
       "Grep",
