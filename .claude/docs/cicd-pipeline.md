@@ -212,7 +212,6 @@ canceled because "build.frontend" failed`). Здесь это было кста�
 в лимиты.
 
 ---
-
 ## Известный изъян: `deploy.yml` не ждёт `ci.yml`
 
 Оба стартуют от одного события (push в `main`) и бегут параллельно.
