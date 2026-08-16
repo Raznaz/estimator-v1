@@ -61,6 +61,22 @@ const config = [
     },
   },
 
+  // Служебные Node-скрипты репозитория (гейт спек и его тесты на node:test).
+  // Корневой `npm run lint` идёт по workspaces и сюда не заходит — блок нужен,
+  // чтобы `npx eslint scripts/` не спотыкался о Node-глобалы.
+  {
+    files: ['scripts/**/*.mjs'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      globals: {
+        process: 'readonly',
+        console: 'readonly',
+        URL: 'readonly',
+      },
+    },
+  },
+
   // Глобалы Jest — только для тестовых файлов.
   {
     files: ['**/*.spec.ts', '**/*.test.ts'],
