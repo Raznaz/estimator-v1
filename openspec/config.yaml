@@ -1,32 +1,137 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+# Контекст проекта — показывается агенту при создании любого артефакта.
+context: |
+  ЯЗЫК. Все артефакты (proposal.md, specs/*.md, design.md, tasks.md) пишутся
+  по-русски. На английском остаются: пути к файлам, имена сущностей, эндпоинтов,
+  socket-событий и типов, примеры кода, а также ключевые слова спецификаций —
+  SHALL / MUST / SHOULD / MAY / GIVEN / WHEN / THEN и заголовки дельт
+  ADDED / MODIFIED / REMOVED.
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+  ПРОДУКТ. Planning Poker (Scrum Poker) — командная оценка тикетов на refinement.
+  Участники заходят в комнату, голосуют картами за стори-поинты по тикету,
+  голоса синхронно раскрываются у всех в реальном времени.
 
-# Per-operation guidance (optional)
-# Add advisory guidance for how apply and archive work should be conducted.
-# This is separate from artifact rules above.
-# Example:
-#   operations:
-#     apply:
-#       guidance:
-#         - Keep test summaries concise
-#     archive:
-#       guidance:
-#         - Summarize the archive outcome before finishing
+  РЕПОЗИТОРИЙ. Монорепо на npm workspaces (frontend, backend), без Turborepo/Nx.
+  Команды запускаются из корня: npm run dev:back, npm run dev:front,
+  npm run lint, npm run typecheck, npm run test, npm run build.
+
+  BACKEND (backend/). NestJS 11, PostgreSQL, Prisma 6, Socket.IO, Swagger.
+  - Модули: auth, users, rooms, tickets, poker, health, common, prisma, shared.
+  - auth и users построены на CQRS (отдельные command/query handlers);
+    rooms и tickets — на обычных сервисах. Это осознанная неоднородность:
+    не выравнивай её без явного требования в предложении.
+  - PrismaModule помечен @Global, PrismaService инжектится без импорта модуля.
+  - prisma/@prisma/client закреплены на ^6 намеренно: Prisma 7 меняет синтаксис
+    блока generator client и текущая схема под неё не проходит.
+  - Тесты: Jest, файлы *.spec.ts рядом с кодом (backend/jest.config.js).
+  - Real-time: backend/src/poker/poker.gateway.ts, socket-хендлеры JOIN_ROOM,
+    CREATE_TICKET, SELECT_TICKET, CAST_VOTE, REVEAL_ROUND, RESET_ROUND, SET_ROLE.
+
+  FRONTEND (frontend/). Next.js 16, App Router, React 19, TypeScript.
+  - Стили: CSS Modules рядом с компонентом (*.module.css). Tailwind не используется.
+  - Данные с REST-API получаем через TanStack Query.
+  - Socket.IO-клиент: frontend/src/lib/socket.ts — ленивый singleton,
+    autoConnect: false, подключение вызывается явно.
+  - Контракт импортируется как @/shared.
+  - Автотестов на фронтенде нет.
+
+  ДОМЕННАЯ МОДЕЛЬ. User → Room (owner) → Participant → Ticket → Round → Vote.
+  Голосование цикличное: у тикета может быть несколько раундов
+  (Round.status: VOTING / REVEALED), голос уникален по паре (roundId, participantId).
+
+  КРИТИЧЕСКИЙ ИНВАРИАНТ. Контракт real-time (events.ts, types.ts, scales.ts)
+  продублирован в frontend/src/shared/ и backend/src/shared/ и синхронизируется
+  вручную — отдельного workspace-пакета нет. Любое изменение имени события,
+  payload-типа, доменного типа или шкалы обязано затронуть ОБЕ копии.
+  Enum'ы Prisma (ScaleType, RoomStatus, ParticipantRole, TicketStatus, RoundStatus)
+  продублированы как union-типы в shared/types.ts — их держим синхронными со схемой.
+  В shared/ не должно быть импортов из Nest, Prisma или React: контракт
+  framework-agnostic.
+
+# Правила по артефактам. Применяются только к соответствующему артефакту.
+rules:
+  proposal:
+    - >-
+      Одно изменение — одно намерение, формулируемое одним предложением.
+      Если получается два несвязанных намерения, предложи разбить на два изменения.
+    - >-
+      Обязательно указывай, затрагивает ли изменение shared-контракт
+      (frontend/src/shared/ и backend/src/shared/) — это влияет на объём работ.
+    - >-
+      Включай секцию с тем, что НЕ входит в скоуп.
+
+  specs:
+    - >-
+      Один requirement — одно наблюдаемое поведение. Три оборота «и ещё» в одной
+      формулировке означают три отдельных требования.
+    - >-
+      Требование должно проверяться снаружи, без доступа к коду.
+      Формулировка — «Система SHALL …».
+    - >-
+      Сценарии покрывают не только happy path. Для REST-эндпоинтов обязательны
+      сценарии на 401 (без токена), 403/404 (чужой или несуществующий ресурс)
+      и на валидацию входных данных.
+    - >-
+      Для socket-событий описывай, кому именно рассылается результат —
+      инициатору, всей комнате или всем кроме инициатора.
+    - >-
+      Имена доменов (папок в openspec/specs/) — kebab-case на английском,
+      согласованы с модулями backend — auth, users, rooms, tickets, poker.
+
+  design:
+    - >-
+      Явно указывай, следует ли изменение CQRS-паттерну (как auth/users) или
+      обычному сервису (как rooms/tickets), и почему.
+    - >-
+      Если меняется схема Prisma — отдельно опиши миграцию.
+
+  tasks:
+    - >-
+      Задача, добавляющая или меняющая REST-эндпоинт, обязана включать пункт про
+      Swagger — @ApiTags на контроллере, @ApiOperation({ summary }) и
+      @ApiResponse-декораторы на ВСЕ исходы (успех и каждая ошибка),
+      @ApiBearerAuth() на эндпоинтах за JwtAuthGuard, модель успешного ответа
+      в backend/src/<module>/dto/responses/*.dto.ts, ошибки через
+      backend/src/common/dto/api-error-response.dto.ts. @ApiProperty на DTO
+      запросов руками НЕ проставляем — их генерирует CLI-плагин Nest.
+    - >-
+      Новый модуль с REST требует отдельного пункта — добавить тег
+      в DocumentBuilder в backend/src/main.ts.
+    - >-
+      Задача, меняющая shared-контракт, обязана содержать отдельный пункт про
+      правку обеих копий — frontend/src/shared/ и backend/src/shared/.
+    - >-
+      Задача на backend включает пункт про unit-тесты
+      (Jest, *.spec.ts рядом с кодом).
+    - >-
+      Если изменение объявляет больше одной capability, каждая группа задач
+      обязана помечать свою capability inline-кодом в САМОМ КОНЦЕ заголовка,
+      например «## 4. Импорт из JIRA — `tickets-import`». У каждой объявленной
+      capability должна быть хотя бы одна такая группа. При единственной
+      capability пометки не нужны. Это проверяет npm run spec:ready.
+    - >-
+      Последним пунктом — прогон проверок из корня репозитория.
+
+# Рекомендации по операциям (отдельно от правил артефактов).
+operations:
+  apply:
+    guidance:
+      - >-
+        После реализации прогнать из корня репозитория — npm run lint,
+        npm run typecheck, npm run test, npm run build.
+      - >-
+        Если менялась схема Prisma — не забыть npm run prisma:generate
+        и npm run prisma:migrate.
+      - >-
+        Не выравнивать архитектуру соседних модулей (CQRS vs сервисы),
+        если этого не требует предложение.
+  archive:
+    guidance:
+      - >-
+        Архивировать только после мерджа PR в main, чтобы openspec/specs/
+        отражала реально уехавший код.
+      - >-
+        Перед архивацией прогнать npm run spec:ready — встроенные проверки не
+        сверяют объявленные в proposal.md capability с фактическими спеками,
+        поэтому эпик может заархивироваться, потеряв часть требований.

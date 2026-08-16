@@ -21,6 +21,8 @@
     "prisma:migrate": "npm run prisma:migrate -w backend",
     "spec:list": "openspec list",
     "spec:validate": "openspec validate --all --strict",
+    "spec:ready": "node scripts/spec-readiness.mjs",
+    "spec:ready:test": "node --test scripts/*.test.mjs",
     "spec:view": "openspec view"
   },
   "engines": {
