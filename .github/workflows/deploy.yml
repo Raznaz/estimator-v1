@@ -1,9 +1,12 @@
 name: Deploy
 
-# Деплой на прод: при push в main и вручную из UI (вкладка Actions → Run workflow).
+# Деплой на прод: после успешного прогона CI на main, и вручную из UI
+# (вкладка Actions → Run workflow). Не триггеримся на push напрямую — иначе
+# сборка и выкатка стартуют, даже если CI (линт/типы/тесты/сборка) упал.
 on:
-  push:
-    branches: [main]
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
   workflow_dispatch:
 
 # Два деплоя одновременно на один сервер — гонка. Ставим в очередь, не отменяя:
@@ -25,13 +28,35 @@ jobs:
     permissions:
       contents: read
       packages: write # право пушить в GHCR
+    # Ручной запуск — всегда; автозапуск по workflow_run — только если CI
+    # реально прошёл и это прогон именно на main (workflow_run срабатывает
+    # и для CI на PR-ветках, их пропускаем).
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_branch == 'main')
+    outputs:
+      sha: ${{ steps.sha.outputs.sha }}
 
     strategy:
       matrix:
         app: [backend, frontend]
 
     steps:
+      # Под workflow_run коммит, который нужно собрать, — это коммит CI-прогона
+      # (github.sha в этом событии указывает на сам workflow deploy.yml, а не на него).
+      - name: Коммит для сборки
+        id: sha
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            echo "sha=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.sha.outputs.sha }}
 
       - uses: docker/setup-buildx-action@v4
 
@@ -58,7 +83,7 @@ jobs:
           file: ${{ matrix.app }}/Dockerfile
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ steps.owner.outputs.lc }}/estimator-${{ matrix.app }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ steps.owner.outputs.lc }}/estimator-${{ matrix.app }}:${{ steps.sha.outputs.sha }}
             ${{ env.REGISTRY }}/${{ steps.owner.outputs.lc }}/estimator-${{ matrix.app }}:latest
           # Адрес API вшивается в бандл фронта на этапе сборки — поменять его
           # в рантайме нельзя. Для backend аргумент просто игнорируется.
@@ -75,7 +100,11 @@ jobs:
   deploy:
     name: Выкатка на сервер
     needs: build
-    if: vars.DEPLOY_ENABLED == 'true'
+    # Явно требуем успеха build: собственный `if` на job с needs отменяет
+    # дефолтную проверку success() зависимостей, а build теперь может быть
+    # skipped (см. его `if` выше) — без needs.build.result == 'success' здесь
+    # мы бы выкатывали несобранные образы.
+    if: vars.DEPLOY_ENABLED == 'true' && needs.build.result == 'success'
     runs-on: ubuntu-latest
     environment: production
 
@@ -91,9 +120,11 @@ jobs:
             set -e
             cd /opt/estimator
 
-            # Тег образов — SHA текущего коммита; пишем в .env.prod,
-            # чтобы docker compose и последующие ручные команды видели ту же версию.
-            sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=${{ github.sha }}|" .env.prod
+            # Тег образов — SHA собранного коммита (не github.sha: под workflow_run
+            # он указывает на сам deploy.yml, а не на закоммиченный код); пишем
+            # в .env.prod, чтобы docker compose и последующие ручные команды
+            # видели ту же версию.
+            sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=${{ needs.build.outputs.sha }}|" .env.prod
 
             docker compose -f docker-compose.prod.yml --env-file .env.prod pull
 
