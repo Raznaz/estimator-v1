@@ -46,14 +46,25 @@ export function AvatarPicker({ currentUrl, onChanged }: AvatarPickerProps) {
             onClick={() => selectPreset(preset.url)}
             disabled={busy}
             title={preset.id}
+            aria-pressed={preset.url === currentUrl}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className={styles.optionImg} src={preset.url} alt={preset.id} />
+            <img
+              className={styles.optionImg}
+              src={preset.url}
+              alt={preset.id}
+              loading="lazy"
+              decoding="async"
+            />
           </button>
         ))}
       </div>
 
-      {error && <p className={styles.error}>{error}</p>}
+      {error && (
+        <p className={styles.error} role="alert">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

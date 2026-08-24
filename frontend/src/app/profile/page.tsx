@@ -52,6 +52,8 @@ function ProfileContent({
               className={styles.currentAvatar}
               src={resolveAvatarUrl(user.avatarUrl) ?? undefined}
               alt={user.name}
+              loading="lazy"
+              decoding="async"
             />
           ) : (
             <span className={styles.currentAvatarFallback}>
@@ -127,8 +129,16 @@ function ProfileForm({ user, onUpdated }: { user: User; onUpdated: (user: User) 
           onChange={(e) => setEmail(e.target.value)}
         />
       </div>
-      {error && <p className={formStyles.error}>{error}</p>}
-      {success && <p className={formStyles.success}>Сохранено</p>}
+      {error && (
+        <p className={formStyles.error} role="alert">
+          {error}
+        </p>
+      )}
+      {success && (
+        <p className={formStyles.success} role="status">
+          Сохранено
+        </p>
+      )}
       <button className={formStyles.button} type="submit" disabled={submitting}>
         {submitting ? 'Сохранение…' : 'Сохранить'}
       </button>
@@ -189,8 +199,16 @@ function PasswordForm() {
           required
         />
       </div>
-      {error && <p className={formStyles.error}>{error}</p>}
-      {success && <p className={formStyles.success}>Пароль изменён</p>}
+      {error && (
+        <p className={formStyles.error} role="alert">
+          {error}
+        </p>
+      )}
+      {success && (
+        <p className={formStyles.success} role="status">
+          Пароль изменён
+        </p>
+      )}
       <button className={formStyles.button} type="submit" disabled={submitting}>
         {submitting ? 'Сохранение…' : 'Сменить пароль'}
       </button>

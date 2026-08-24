@@ -93,6 +93,8 @@ export function AppHeader() {
                   className={styles.avatar}
                   src={resolveAvatarUrl(user.avatarUrl) ?? undefined}
                   alt={user.name}
+                  loading="lazy"
+                  decoding="async"
                 />
               ) : (
                 <span className={styles.avatarFallback}>{user.name.charAt(0).toUpperCase()}</span>

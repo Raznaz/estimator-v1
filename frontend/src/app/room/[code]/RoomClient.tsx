@@ -180,13 +180,21 @@ export default function RoomClient({ code }: { code: string }) {
 
   return (
     <div className={styles.page}>
-      {error && <p className={styles.errorBanner}>{error}</p>}
+      {error && (
+        <p className={styles.errorBanner} role="alert">
+          {error}
+        </p>
+      )}
 
       <div className={styles.layout}>
         <main className={styles.stage}>
           {isOwner && (
             <form className={styles.newTicketForm} onSubmit={createTicket}>
+              <label className={styles.srOnly} htmlFor="new-ticket-title">
+                Название новой задачи
+              </label>
               <input
+                id="new-ticket-title"
                 className={styles.input}
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
@@ -281,6 +289,7 @@ export default function RoomClient({ code }: { code: string }) {
                       }`}
                       onClick={toggleObserver}
                       title="Режим наблюдателя"
+                      aria-pressed={isSpectator}
                     >
                       ☕
                     </button>
@@ -295,6 +304,7 @@ export default function RoomClient({ code }: { code: string }) {
                       myVote === card ? styles.cardSelected : ''
                     }`}
                     onClick={() => castVote(card)}
+                    aria-pressed={myVote === card}
                   >
                     <span className={styles.cardIndex}>{card}</span>
                     <span className={styles.cardValue}>{card}</span>
@@ -356,8 +366,17 @@ function Avatar({
   const url = resolveAvatarUrl(avatarUrl);
   const dimension = { width: size, height: size };
   if (url) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img className={styles.avatarImg} style={dimension} src={url} alt={name} />;
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        className={styles.avatarImg}
+        style={dimension}
+        src={url}
+        alt={name}
+        loading="lazy"
+        decoding="async"
+      />
+    );
   }
   return (
     <span

@@ -80,7 +80,11 @@ function RegisterForm() {
             required
           />
         </div>
-        {error && <p className={styles.error}>{error}</p>}
+        {error && (
+          <p className={styles.error} role="alert">
+            {error}
+          </p>
+        )}
         <button className={styles.button} type="submit" disabled={submitting}>
           {submitting ? 'Создание…' : 'Зарегистрироваться'}
         </button>
